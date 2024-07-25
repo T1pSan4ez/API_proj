@@ -1,0 +1,17 @@
+function displayPagination(totalTrips) {
+    let paginationContainer = document.getElementById('pagination');
+    paginationContainer.innerHTML = '';
+
+    let totalPages = Math.ceil(totalTrips / tripsPerPage);
+
+    for (let i = 1; i <= totalPages; i++) {
+        let pageButton = document.createElement('button');
+        pageButton.innerText = i;
+        pageButton.className = 'pagination-button';
+        if (i === currentPage) {
+            pageButton.classList.add('active');
+        }
+        pageButton.onclick = () => displayFavorites(i);
+        paginationContainer.appendChild(pageButton);
+    }
+}

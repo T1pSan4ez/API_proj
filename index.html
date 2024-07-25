@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+
+    <link rel="stylesheet" href="https://unpkg.com/swiper/swiper-bundle.min.css">
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css"/>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css"/>
+
+    <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
+    <script src="https://unpkg.com/leaflet-control-geocoder@1.13.0/dist/Control.Geocoder.js"></script>
+
+    <link href='https://unpkg.com/fullcalendar@5.10.1/main.min.css' rel='stylesheet'/>
+    <script src='https://unpkg.com/fullcalendar@5.10.1/main.min.js'></script>
+    <script src='https://unpkg.com/fullcalendar@5.10.1/locales-all.min.js'></script>
+
+    <link rel="stylesheet" href="css/style.css"></link>
+    <title>Trip planner</title>
+    <link rel="icon" href="images/logo.png" type="image/png">
+</head>
+<body>
+<header class="header">
+    <div class="header-menu">
+        <div class="image-container">
+            <a href="#"><img src="images/logo.png" alt="logo" class="logo-image"></a>
+        </div>
+        <div>
+            <p>TRIP</p>
+            <p class="strikeText">PLANNER</p>
+        </div>
+    </div>
+</header>
+<main>
+    <div class="container">
+        <section class="text-section">
+            <p class="main-text">Ниже вы сможете ввести данные для своей поездки</p>
+            <p class="support-text">Вы получите всю необходимую информацию, прогноз погоды, маршрут, места интересов, отели и рестораны!</p>
+            <div id="past-trip-section">
+                <h2>Сгенерированные поездки</h2>
+                <div class="swiper-container">
+                    <div id="trip-forms" class="swiper-wrapper"></div>
+                </div>
+            </div>
+
+            <div id="favoriteModal" class="modal">
+                <div class="modal-content">
+                    <div class="favoriteTitle">
+                        <span class="close">&times;</span>
+                        <h2 >Избранные поездки</h2>
+                    </div>
+                    <div id="favorite-trips"></div>
+                    <div class="pagination-container">
+                        <div id="pagination"></div>
+                    </div>
+
+                </div>
+            </div>
+        </section>
+        <section class="trip-section">
+            <div class="input-section">
+                <button id="favoriteButton">Показать избранное</button>
+                <label class="labels">Выберите дату?</label>
+                <p id="error-date" class="error">Пустое поле или ошибка ввода</p>
+                <input type="date" id="date-trip" class="inputs" >
+                <label class="labels" >Откуда начнется ваша поездка?</label>
+                <p id="error-city-from" class="error">Пустое поле или ошибка ввода</p>
+                <input type="text" id="from-city" class="inputs">
+                <label class="labels">Куда направляетесь?</label>
+                <p id="error-city-to" class="error">Пустое поле или ошибка ввода</p>
+                <input type="text" id="to-city" class="inputs">
+                <button id="route-button" onclick="addRouting()">Проложить маршрут</button>
+                <div class="images-map">
+                    <img src="images/hotel.png" alt="hotel" id="find-hotels">
+                    <img src="images/food.png" alt="food" id="find-restaurant">
+                    <img src="images/parks.png" alt="park" id="find-parks">
+                    <img src="images/monument.png" alt="monument" id="find-monument">
+                </div>
+                <button id="weather-button">Прогноз погоды</button>
+
+                <form id="transport" class="radio-choose">
+                    <h3 class="radio-text">Выберите транспорт:</h3>
+                    <input type="radio" id="bus" class="radio-text" name="transport" value="150"
+                           onchange="getSelectedTransport()">
+                    <label for="bus">Билет на автобус (150 UAH)</label><br>
+                    <input type="radio" id="auto" class="radio-text" name="transport" value="500"
+                           onchange="getSelectedTransport()">
+                    <label for="auto">Аренда легковой машины (500 UAH)</label><br>
+                    <input type="radio" id="busik" class="radio-text" name="transport" value="800"
+                           onchange="getSelectedTransport()">
+                    <label for="busik">Аренда микроавтобуса (800 UAH)</label><br>
+                </form>
+                <form id="people" class="radio-choose">
+                    <h3 class="radio-text">Сколько людей в поездке:</h3>
+                    <input type="radio" id="solo" class="radio-text" name="people" value="250"
+                           onchange="getSelectedPeople()">
+                    <label for="solo">Один (250 UAH)</label><br>
+                    <input type="radio" id="family" class="radio-text" name="people" value="400"
+                           onchange="getSelectedPeople()">
+                    <label for="family">Семья (400 UAH)</label><br>
+                    <input type="radio" id="couple" class="radio-text" name="people" value="600"
+                           onchange="getSelectedPeople()">
+                    <label for="couple">Пара (600 UAH)</label><br>
+                    <input type="radio" id="group" class="radio-text" name="people" value="1000"
+                           onchange="getSelectedPeople()">
+                    <label for="group">Группа (1000 UAH)</label><br>
+                </form>
+                <button type="button" id="generate-trip">Сгенерировать поездку</button>
+            </div>
+            <div id="map"></div>
+
+        </section>
+        <section class="decoration-section">
+            <div>
+                <div id="weatherTitleFrom" class="weatherTitle"></div>
+                <div id="weatherFrom" class="weather"></div>
+                <div id="weatherTitleTo" class="weatherTitle"></div>
+                <div id="weatherTo" class="weather"></div>
+            </div>
+        </section>
+    </div>
+</main>
+<footer class="footer">
+</footer>
+
+<script src="https://unpkg.com/swiper/swiper-bundle.min.js"></script>
+<script src="js/trip.js"></script>
+<script src="js/weather.js"></script>
+
+</body>
+</html>
