@@ -1,6 +1,6 @@
 const apiKey = 'af1c606cbebbc22a9abbe08a5abb2f6d';
 
-document.getElementById('weather-button').addEventListener('click', function () {
+document.getElementById('weather-button').addEventListener('click', async function () {
     const fromCity = document.getElementById('from-city').value;
     const toCity = document.getElementById('to-city').value;
     const startDate = new Date(document.getElementById('date-trip').value).getTime() / 1000;
@@ -40,40 +40,40 @@ document.getElementById('weather-button').addEventListener('click', function () 
         return;
     }
 
-    function fetchWeather(city, idWeatherTittle, idWeather) {
+    async function fetchWeather(city, idWeatherTittle, idWeather) {
         const url = `https://api.openweathermap.org/data/2.5/forecast?q=${city}&appid=${apiKey}&units=metric`;
 
-        fetch(url)
-            .then(response => response.json())
-            .then(data => {
-                console.log(data);
-                const forecast = data.list.filter((day, index) => day.dt >= startDate && index % 8 === 0);
+        try {
+            const response = await fetch(url);
+            const data = await response.json();
+            console.log(data);
 
-                let forecastHtmlTittle = `<h2>Прогноз погоды для: <strong>${city}</strong></h2>`;
-                let forecastHtml = ``;
+            const forecast = data.list.filter((day, index) => day.dt >= startDate && index % 8 === 0);
 
-                forecast.forEach(day => {
-                    const date = new Date(day.dt * 1000).toLocaleDateString();
-                    const iconUrl = `https://openweathermap.org/img/wn/${day.weather[0].icon}.png`;
+            let forecastHtmlTittle = `<h2>Прогноз погоды для: <strong>${city}</strong></h2>`;
+            let forecastHtml = ``;
 
-                    forecastHtml +=
-                        `<div id="days-weather">
-                                        <p>${date}</p>
-                                        <hr>
-                                        <p>${day.main.temp}°C</p>
-                                        <p><img src="${iconUrl}" alt="Weather icon"></p> 
-                                    </div>`;
-                });
+            forecast.forEach(day => {
+                const date = new Date(day.dt * 1000).toLocaleDateString();
+                const iconUrl = `https://openweathermap.org/img/wn/${day.weather[0].icon}.png`;
 
-                document.getElementById(idWeatherTittle).innerHTML = forecastHtmlTittle;
-                document.getElementById(idWeather).innerHTML = forecastHtml;
-            })
-            .catch(error => {
-                console.error('Error fetching the weather data', error);
-                document.getElementById(idWeather).innerText = 'Error fetching the weather data';
+                forecastHtml +=
+                    `<div id="days-weather">
+                        <p>${date}</p>
+                        <hr>
+                        <p>${day.main.temp}°C</p>
+                        <p><img src="${iconUrl}" alt="Weather icon"></p> 
+                    </div>`;
             });
+
+            document.getElementById(idWeatherTittle).innerHTML = forecastHtmlTittle;
+            document.getElementById(idWeather).innerHTML = forecastHtml;
+        } catch (error) {
+            console.error('Error fetching the weather data', error);
+            document.getElementById(idWeather).innerText = 'Error fetching the weather data';
+        }
     }
 
-    fetchWeather(fromCity, 'weatherTitleFrom', 'weatherFrom');
-    fetchWeather(toCity, 'weatherTitleTo', 'weatherTo');
+    await fetchWeather(fromCity, 'weatherTitleFrom', 'weatherFrom');
+    await fetchWeather(toCity, 'weatherTitleTo', 'weatherTo');
 });

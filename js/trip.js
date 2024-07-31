@@ -6,19 +6,17 @@ leaflet.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
 }).addTo(map);
 
-function reverseGeocode(lat, lon) {
+async function reverseGeocode(lat, lon) {
     const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=10&addressdetails=1`;
 
-    fetch(url)
-        .then(response => response.json())
-        .then(data => {
-            if (data && data.address) {
-                document.getElementById('from-city').value = data.address.city || data.address.town || data.address.village;
-            } else {
-                alert('Город не найден');
-            }
-        })
-        .catch(error => console.error('Ошибка:', error));
+    const response = await fetch(url);
+    const data = await response.json();
+
+    if (data && data.address) {
+        document.getElementById('from-city').value = data.address.city || data.address.town || data.address.village;
+    } else {
+        alert('Город не найден');
+    }
 }
 
 function getCookie(name) {
@@ -78,24 +76,21 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 });
 
-function getCoordinates(city, callback) {
+async function getCoordinates(city) {
     const url = `https://nominatim.openstreetmap.org/search?format=json&q=${city}`;
 
-    fetch(url)
-        .then(response => response.json())
-        .then(data => {
-            if (data && data.length > 0) {
-                const lat = data[0].lat;
-                const lon = data[0].lon;
-                callback(null, leaflet.latLng(lat, lon));
-            } else {
-                callback(new Error('Город не найден'));
-                alert(`Город ${city} не найден`);
-            }
-        })
-        .catch(error => {
-            callback(error);
-        });
+    const response = await fetch(url);
+    const data = await response.json();
+
+    if (data && data.length > 0) {
+        const lat = data[0].lat;
+        const lon = data[0].lon;
+        return leaflet.latLng(lat, lon);
+    } else {
+        alert(`Город ${city} не найден`);
+        throw new Error(`Город не найден`);
+    }
+
 }
 
 let globalDistance = 0;
@@ -104,7 +99,7 @@ let globalCityTo = '';
 let globalTotalCost = 0;
 let globalTime = 0;
 
-function addRouting() {
+async function addRouting() {
     map.eachLayer(function (layer) {
         if (!layer._url) {
             map.removeLayer(layer);
@@ -148,64 +143,54 @@ function addRouting() {
         return;
     }
 
-    getCoordinates(cityA, function (err, pointA) {
-        if (err) {
-            console.error('Не удалось получить координаты для города A:', err);
-            return;
-        }
-        getCoordinates(cityB, function (err, pointB) {
-            if (err) {
-                console.error('Не удалось получить координаты для города B:', err);
-                return;
-            }
+    try {
+        const pointA = await getCoordinates(cityA);
+        const pointB = await getCoordinates(cityB);
 
-            const routingControl = leaflet.Routing.control({
-                waypoints: [pointA, pointB], routeWhileDragging: true, geocoder: leaflet.Control.Geocoder.nominatim()
-            }).addTo(map);
+        const routingControl = leaflet.Routing.control({
+            waypoints: [pointA, pointB], routeWhileDragging: true, geocoder: leaflet.Control.Geocoder.nominatim()
+        }).addTo(map);
 
-            routingControl.on('routesfound', function (event) {
-                const routes = event.routes;
-                const summary = routes[0].summary;
-                const distance = summary.totalDistance / 1000;
-                const time = summary.totalTime / 3600;
+        routingControl.on('routesfound', function (event) {
+            const routes = event.routes;
+            const summary = routes[0].summary;
+            const distance = summary.totalDistance / 1000;
+            const time = summary.totalTime / 3600;
 
-                globalDistance = distance.toFixed(2);
-                globalTime = time.toFixed(2);
-            });
+            globalDistance = distance.toFixed(2);
+            globalTime = time.toFixed(2);
         });
-    });
+    } catch (error) {
+        console.error('Не удалось получить координаты:', error);
+    }
 }
 
-function findMapObject(cityUrl, objectMarker, nodeType, typeObject, type) {
+async function findMapObject(cityUrl, objectMarker, nodeType, typeObject, type) {
     const geocodeUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(cityUrl)}`;
 
-    fetch(geocodeUrl)
-        .then(response => response.json())
-        .then(data => {
-            if (data.length > 0) {
-                const lat = data[0].lat;
-                const lon = data[0].lon;
-                map.setView([lat, lon], 13);
+    const response = await fetch(geocodeUrl);
+    const data = await response.json();
 
-                const overpassUrl = `https://overpass-api.de/api/interpreter?data=[out:json];node["${nodeType}"="${typeObject}"](around:10000,${lat},${lon});out body;`;
+    if (data.length > 0) {
+        const lat = data[0].lat;
+        const lon = data[0].lon;
+        map.setView([lat, lon], 13);
 
-                fetch(overpassUrl)
-                    .then(response => response.json())
-                    .then(data => {
-                        data.elements.forEach(element => {
-                            if (element.type === 'node') {
-                                leaflet.marker([element.lat, element.lon], {icon: objectMarker})
-                                    .addTo(map)
-                                    .bindPopup(element.tags.name || `${type}`);
-                            }
-                        });
-                    })
-                    .catch(error => console.error('Error:', error));
-            } else {
-                alert('Введите правильное название города');
+        const overpassUrl = `https://overpass-api.de/api/interpreter?data=[out:json];node["${nodeType}"="${typeObject}"](around:10000,${lat},${lon});out body;`;
+
+        const overpassResponse = await fetch(overpassUrl);
+        const overpassData = await overpassResponse.json();
+
+        overpassData.elements.forEach(element => {
+            if (element.type === 'node') {
+                leaflet.marker([element.lat, element.lon], {icon: objectMarker})
+                    .addTo(map)
+                    .bindPopup(element.tags.name || `${type}`);
             }
-        })
-        .catch(error => console.error('Error of geocoding:', error));
+        });
+    } else {
+        alert('Введите правильное название города');
+    }
 }
 
 const findHotel = document.getElementById('find-hotels');
@@ -292,9 +277,9 @@ function calculateTotal() {
 
     const price = 600;
 
-    const totalCost = price + transportCost + peopleCost;
-    globalTotalCost = totalCost;
-    document.getElementById('total-price').innerText = `Общая стоимость: ${totalCost} UAH`;
+
+    globalTotalCost = price + transportCost + peopleCost;
+    // document.getElementById('total-price').innerText = `Общая стоимость: ${totalCost} UAH`;
 }
 
 document.getElementById('transport').addEventListener('change', calculateTotal);
